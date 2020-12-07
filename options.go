@@ -11,6 +11,7 @@ import (
 	"github.com/lonng/nano/internal/message"
 	"github.com/lonng/nano/pipeline"
 	"github.com/lonng/nano/serialize"
+	"github.com/lonng/nano/session"
 	"google.golang.org/grpc"
 )
 
@@ -33,7 +34,7 @@ func WithAdvertiseAddr(addr string, retryInterval ...time.Duration) Option {
 	}
 }
 
-// WithMemberAddr sets the listen address which is used to establish connection between
+// WithClientAddr sets the listen address which is used to establish connection between
 // cluster members. Will select an available port automatically if no member address
 // setting and panic if no available port
 func WithClientAddr(addr string) Option {
@@ -77,6 +78,13 @@ func WithCheckOriginFunc(fn func(*http.Request) bool) Option {
 	}
 }
 
+// WithCheckTokenFunc sets the function that check `token` in path
+func WithCheckTokenFunc(fn func(string, *session.Session) error) Option {
+	return func(opt *cluster.Options) {
+		env.CheckToken = fn
+	}
+}
+
 // WithDebugMode let 'nano' to run under Debug mode.
 func WithDebugMode() Option {
 	return func(_ *cluster.Options) {
@@ -84,7 +92,7 @@ func WithDebugMode() Option {
 	}
 }
 
-// SetDictionary sets routes map
+// WithDictionary sets routes map
 func WithDictionary(dict map[string]uint16) Option {
 	return func(_ *cluster.Options) {
 		message.SetDictionary(dict)

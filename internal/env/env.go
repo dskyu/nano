@@ -28,16 +28,19 @@ import (
 
 	"github.com/lonng/nano/serialize"
 	"github.com/lonng/nano/serialize/protobuf"
+	"github.com/lonng/nano/session"
 	"google.golang.org/grpc"
 )
 
 var (
-	Wd          string                   // working path
-	Die         chan bool                // wait for end application
-	Heartbeat   time.Duration            // Heartbeat internal
-	CheckOrigin func(*http.Request) bool // check origin when websocket enabled
-	Debug       bool                     // enable Debug
-	WSPath      string                   // WebSocket path(eg: ws://127.0.0.1/WSPath)
+	Wd          string                               // working path
+	Die         chan bool                            // wait for end application
+	Heartbeat   time.Duration                        // Heartbeat internal
+	CheckOrigin func(*http.Request) bool             // check origin when websocket enabled
+	CheckToken  func(string, *session.Session) error // check token when websocket enabled
+
+	Debug  bool   // enable Debug
+	WSPath string // WebSocket path(eg: ws://127.0.0.1/WSPath)
 
 	// timerPrecision indicates the precision of timer, default is time.Second
 	TimerPrecision = time.Second

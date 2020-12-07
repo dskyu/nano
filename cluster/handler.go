@@ -47,8 +47,9 @@ import (
 
 var (
 	// cached serialized data
-	hrd []byte // handshake response data
-	hbd []byte // heartbeat packet data
+	notAuthHrd []byte // not authed handshake response data
+	hrd        []byte // handshake response data
+	hbd        []byte // heartbeat packet data
 )
 
 type rpcHandler func(session *session.Session, msg *message.Message, noCopy bool)
@@ -58,6 +59,19 @@ func cache() {
 		"code": 200,
 		"sys":  map[string]float64{"heartbeat": env.Heartbeat.Seconds()},
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	data, err = json.Marshal(map[string]interface{}{
+		"code": 401,
+		"sys":  map[string]float64{"heartbeat": env.Heartbeat.Seconds()},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	notAuthHrd, err = codec.Encode(packet.Handshake, data)
 	if err != nil {
 		panic(err)
 	}
@@ -252,11 +266,36 @@ func (h *LocalHandler) handle(conn net.Conn) {
 func (h *LocalHandler) processPacket(agent *agent, p *packet.Packet) error {
 	switch p.Type {
 	case packet.Handshake:
-		if _, err := agent.conn.Write(hrd); err != nil {
-			return err
+		authed := true
+		if env.CheckToken != nil {
+			v := make(map[string]interface{})
+			if err := json.Unmarshal(p.Data, &v); err != nil {
+				authed = false
+			}
+			token, ok := v["token"].(string)
+			if !ok {
+				authed = false
+			}
+			if err := env.CheckToken(token, agent.session); err != nil {
+				authed = false
+			}
 		}
 
-		agent.setStatus(statusHandshake)
+		if authed {
+			log.Println("auth ok")
+			if _, err := agent.conn.Write(hrd); err != nil {
+				return err
+			}
+			agent.setStatus(statusHandshake)
+		} else {
+			log.Println("auth failed")
+			if _, err := agent.conn.Write(notAuthHrd); err != nil {
+				return err
+			}
+			agent.setStatus(statusHandshake)
+			agent.Close()
+		}
+
 		if env.Debug {
 			log.Println(fmt.Sprintf("Session handshake Id=%d, Remote=%s", agent.session.ID(), agent.conn.RemoteAddr()))
 		}
