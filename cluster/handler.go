@@ -23,6 +23,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -63,6 +64,11 @@ func cache() {
 		panic(err)
 	}
 
+	hrd, err = codec.Encode(packet.Handshake, data)
+	if err != nil {
+		panic(err)
+	}
+
 	data, err = json.Marshal(map[string]interface{}{
 		"code": 401,
 		"sys":  map[string]float64{"heartbeat": env.Heartbeat.Seconds()},
@@ -72,11 +78,6 @@ func cache() {
 	}
 
 	notAuthHrd, err = codec.Encode(packet.Handshake, data)
-	if err != nil {
-		panic(err)
-	}
-
-	hrd, err = codec.Encode(packet.Handshake, data)
 	if err != nil {
 		panic(err)
 	}
@@ -263,22 +264,31 @@ func (h *LocalHandler) handle(conn net.Conn) {
 	}
 }
 
+func (h *LocalHandler) checkToken(agent *agent, p *packet.Packet) error {
+
+	if env.CheckToken != nil {
+		v := make(map[string]interface{})
+		if err := json.Unmarshal(p.Data, &v); err != nil {
+			return err
+		}
+		token, ok := v["token"].(string)
+		if !ok {
+			return errors.New("no token")
+		}
+		if err := env.CheckToken(token, agent.session); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (h *LocalHandler) processPacket(agent *agent, p *packet.Packet) error {
 	switch p.Type {
 	case packet.Handshake:
 		authed := true
-		if env.CheckToken != nil {
-			v := make(map[string]interface{})
-			if err := json.Unmarshal(p.Data, &v); err != nil {
-				authed = false
-			}
-			token, ok := v["token"].(string)
-			if !ok {
-				authed = false
-			}
-			if err := env.CheckToken(token, agent.session); err != nil {
-				authed = false
-			}
+		if err := h.checkToken(agent, p); err != nil {
+			authed = false
 		}
 
 		if authed {
