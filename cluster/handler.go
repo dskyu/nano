@@ -475,6 +475,14 @@ func (h *LocalHandler) localProcess(handler *component.Handler, lastMid uint64, 
 			v.lastMid = lastMid
 		}
 
+		for _, c := range h.currentNode.Components.List() {
+			if reflect.ValueOf(c.Comp) == handler.Receiver {
+				if err := c.Comp.BeforeHandle(session, data); err != nil {
+					return
+				}
+			}
+		}
+
 		result := handler.Method.Func.Call(args)
 		if len(result) > 0 {
 			if err := result[0].Interface(); err != nil {
