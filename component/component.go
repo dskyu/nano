@@ -20,7 +20,9 @@
 
 package component
 
-import "github.com/lonng/nano/session"
+import (
+	"github.com/lonng/nano/session"
+)
 
 // Component is the interface that represent a component.
 type Component interface {
@@ -28,5 +30,5 @@ type Component interface {
 	AfterInit()
 	BeforeShutdown()
 	Shutdown()
-	BeforeHandle(*session.Session, interface{}) error
+	BeforeHandle(*session.Session, string, interface{}) error
 }

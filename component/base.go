@@ -20,7 +20,9 @@
 
 package component
 
-import "github.com/lonng/nano/session"
+import (
+	"github.com/lonng/nano/session"
+)
 
 // Base implements a default component for Component.
 type Base struct{}
@@ -38,6 +40,6 @@ func (c *Base) BeforeShutdown() {}
 func (c *Base) Shutdown() {}
 
 // BeforeHandle was called before execute handler
-func (c *Base) BeforeHandle(s *session.Session, data interface{}) error {
+func (c *Base) BeforeHandle(s *session.Session, route string, data interface{}) error {
 	return nil
 }
